@@ -1,6 +1,7 @@
 import moment from "moment";
 import axios from "axios";
 import {Kafka} from "kafkajs";
+import jwt from "jsonwebtoken";
 import config from "../config/config";
 import connection from '../dao/connection';
 import dao from "../dao/daoGenerator"
@@ -71,42 +72,6 @@ let getId = async(req, res) => {
     res.json(response.data)
 }
 
- let getProviderData = connection => doa => async(req, res) => {
-
-    let user = req.data.user
-    user.provider = (await doa.getProviderByUser(connection)(user.uuid))[0][0]
-    user.providerId = user.provider.provider_id
-    user.userId = user.provider.user_id
-    let attributes = ((await doa.getProviderAttributeByAttributeTypeUuid(connection)(user.providerId)('c34fac13-9c48-4f29-beb1-04c8d0a86754'))[0]).map(result => result.value)
-    user.location = (await doa.getLocationByUuid(connection)(attributes))[0]
-    user.personName = (await doa.getPersonNameByProviderId(connection)(user.providerId))[0][0]
-    user.personId = user.personName.person_id;
-    req.data.timeZone = process.env.TZ
-    res.json(req.data)
- }
-
- function uploadFiles(req, res) {
-        
-    const EDI_DIR = config.ediDirectory;
-    if (!req.files || Object.keys(req.files).length === 0) {
-        return res.status(400);
-    }
-
-    let name = Object.keys(req.files)[0]
-    let files = req.files[name];
-
-    const dir = `${EDI_DIR}/${name}/${moment.now().toString()}`
-
-    fs.mkdirSync(dir, { recursive: true });
-
-    if(Array.isArray(files))
-        files.map(file => file.mv(`${dir}/${file.name}`, err => console.error(err)));
-    else
-        files.mv(`${dir}/${files.name}`, err => console.error(err));
-
-    res.sendStatus(200);
- }
-
 
  let genericController = connection => dao => (tableName, patientIdAttribute='patient_id')  => async(req, res) => {
      
@@ -120,15 +85,31 @@ let getId = async(req, res) => {
     res.json(result)
  }
 
+ let verifySessionToken = (req, res,next) => {
+
+    const TOKEN = req.headers['x-access-token'];
+
+    if(TOKEN == null)
+        return res.sendStatus(401);
+
+    const decoded = jwt.verify(TOKEN, `${process.env.SECRET_KEY}`);
+
+    if(decoded != null){
+        req.user = decoded;
+        next();
+    }  
+    else
+        return res.sendStatus(401);
+}
+
 let doaControllerGenerator = controllerGenerator([getAllResoures, getResourcesByUUID, getResourcesByDatetimeNewerThan, datetimeFormatter,putResource(producer)])
 
 
 
 let controller = {
-    uploadFiles,
+    verifySessionToken,
 	doaControllerGenerator,
         getId,
-        getProviderData:getProviderData(connection)(dao),
         getPatientIdentifier:genericController(connection)(dao)('patient_identifier'),
         getVisit:genericController(connection)(dao)('visit'),
         getEncounter:genericController(connection)(dao)('encounter'),

@@ -12,6 +12,8 @@ const routeParams = `location/:locationId/limit/:datetime/:offset/:limit`
 
 const routeParamsNoLocation = `limit/:datetime/:offset/:limit`
 
+router.use(controller.verifySessionToken);
+
 router.get(`/${SUB_URL}/idgen/:source(\\d+)/:batchSize(\\d+)`,controller.getId);
 
 //GET patient identifier
