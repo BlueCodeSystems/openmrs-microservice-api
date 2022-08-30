@@ -24,7 +24,7 @@
     "jsonwebtoken": "^8.5.1",
     "kafkajs": "^1.10.0",
     "moment": "^2.24.0",
-    "moment-timezone": "^0.5.26",
+    "moment-timezone": "^0.5.35",
     "mysql2": "^1.6.5",
     "ramda": "^0.26.1"
   },
